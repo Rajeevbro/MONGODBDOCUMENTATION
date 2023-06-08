@@ -5,7 +5,6 @@ db.boxofficeData.find({ "meta.rating": { $gt: 9.2 } }).count();
 db.movies.find({ summary: { $regex: /Armstrong/ } });
 
 //complex And in mongodb which find meeting all the criteria
-// SOme more example
 
 db.movies
   .find({
@@ -29,6 +28,7 @@ db.movies
   .count();
 
 // not operator: Not operator eaither need regex /..../or document :{....}to work on
+
 db.movies.find({ name: { $not: /Bitten/ } }).count();
 
 // Query using And Operator bot also using not operator at the same time
