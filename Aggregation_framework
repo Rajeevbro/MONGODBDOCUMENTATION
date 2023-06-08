@@ -1,0 +1,242 @@
+db.persons.aggregate([{ $match: { gender: "female" } }]); // gives a value whose gender is female
+
+db.persons.aggregate([
+  { $match: { gender: "female" } },
+  { $group: { _id: { state: "$location.state" }, totalPersons: { $sum: 1 } } },
+  { $sort: { totalPersons: -1 } },
+]);
+// Finding person whose age is greater than 50 and calculating there average age on basis of gender
+db.persons.aggregate([
+  { $match: { "dob.age": { $gt: 50 } } },
+  { $group: { _id: { gender: "$gender" }, averageAge: { $avg: "$dob.age" } } },
+  { $sort: { averageAge: -1 } },
+]);
+
+db.persons.aggregate([
+  {
+    $project: {
+      $concat: [
+        { $toUpper: { $substrCP: ["$name.first", 0, 1] } },
+        {
+          $substrCP: [
+            "$name.first",
+            1,
+            { $subtract: { $strLenCP: ["$name.first"] } },
+          ],
+        },
+      ],
+    },
+  },
+]);
+
+db.persons.aggregate([
+  {
+    $project: {
+      gender: 1,
+      name: {
+        $concat: [
+          { $toUpper: { $substrCP: ["$name.first", 0, 1] } },
+          {
+            $substrCP: [
+              "$name.first",
+              1,
+              { $subtract: [{ $strLenCP: ["$name.first"] }, 1] },
+            ],
+          },
+          " ",
+          { $toUpper: { $substrCP: ["$name.last", 0, 1] } },
+          {
+            $substrCP: [
+              "$name.last",
+              1,
+              { $subtract: [{ $strLenCP: ["$name.last"] }, 1] },
+            ],
+          },
+        ],
+      },
+    },
+  },
+]);
+
+db.persons.aggregate([
+  {
+    $project: {
+      name: 1,
+      email: 1,
+      location: {
+        type: "Point",
+        coordinates: [
+          {
+            $convert: {
+              input: "$location.coordninates.longitude",
+              to: "double",
+              onNull: 0.0,
+              onError: 0.0,
+            },
+          },
+          {
+            $convert: {
+              input: "$location.coordinates.latitude",
+              to: "double",
+              onNull: 0.0,
+              onError: 0.0,
+            },
+          },
+        ],
+      },
+    },
+  },
+]);
+
+db.persons.aggregate([
+  {
+    $project: {
+      email: 1,
+      name: 1,
+      age: "$dob.age",
+      date: {
+        $convert: {
+          input: "$dob.date",
+          to: "date",
+          onError: "Not available",
+          onNull: "Not avaialble",
+        },
+      },
+    },
+  },
+]);
+
+db.persons.aggregate([
+  {
+    $project: {
+      name: 1,
+      birthDate: { $toDate: "$dob.date" },
+      age: "$dob.age",
+      locations: {
+        type: "Point",
+        coordinates: [
+          {
+            $convert: {
+              input: "$location.coordinates.latitude",
+              to: "double",
+              onNull: 0.0,
+              onError: 0.0,
+            },
+          },
+          {
+            $convert: {
+              input: "$location.coordinates.longitude",
+              to: "double",
+              onNull: 0.0,
+              onError: 0.0,
+            },
+          },
+        ],
+      },
+    },
+  },
+  {
+    $project: {
+      email: 1,
+      birthDate: 1,
+      age: 1,
+      locations: 1,
+
+      name: {
+        $concat: [
+          { $toUpper: { $substrCP: ["$name.first", 0, 1] } },
+          {
+            $substrCP: [
+              "$name.first",
+              1,
+              { $subtract: [{ $strLenCP: ["$name.first"] }, 1] },
+            ],
+          },
+          " ",
+          { $toUpper: { $substrCP: ["$name.last", 0, 1] } },
+          {
+            $substrCP: [
+              "$name.last",
+              1,
+              { $subtract: [{ $strLenCP: ["$name.last"] }, 1] },
+            ],
+          },
+        ],
+      },
+    },
+  },
+  {
+    $group: {
+      _id: { birthyear: { $isoWeekYear: "$birthDate" } },
+      number: { $sum: 1 },
+    },
+  },
+  { $sort: { number: -1 } },
+]);
+
+//Aggregation of element of arrays
+
+db.data.aggregate([
+  { $unwind: "$hobbies" },
+  { $group: { _id: { age: "$age" }, hobbies: { $push: "$hobbies" } } },
+]);
+
+db.data.aggregate([
+  { $unwind: "$hobbies" },
+  { $group: { _id: { age: "$age" }, hobbies: { $addToSet: "$hobbies" } } },
+]);
+
+db.data.aggregate([
+  { $project: { _id: "$_id", examScore: { $slice: ["$examScores", 1] } } },
+]);
+
+db.data.aggregate([{ $project: { _id: 0, num: { $size: "$examScores" } } }]);
+
+db.data.aggregate([
+  {
+    $project: {
+      _id: 0,
+      scores: {
+        $filter: {
+          input: "$examScores",
+          as: "sc",
+          cond: { $gt: ["$$sc.score", 60] },
+        },
+      },
+    },
+  },
+]);
+
+db.data.aggregate([
+  { $unwind: "$examScores" },
+  { $project: { _id: 1, name: 1, scores: "$examScores.score" } },
+  { $group: { _id: "$_id", highestScore: { $max: "$scores" } } },
+]);
+
+//bucketing
+db.persons.aggregate([
+  {
+    $bucket: {
+      groupBy: "$dob.age",
+      boundaries: [10, 20, 40, 60, 80, 100, 120],
+      output: {
+        numPersons: { $sum: 1 },
+        avgAge: { $avg: "$dob.age" },
+      },
+    },
+  },
+]);
+
+//Auto Bucketing
+db.persons.aggregate([
+  {
+    $bucketAuto: {
+      groupBy: "$dob.age",
+      buckets: 5,
+      output: {
+        numberofPersons: { $sum: 1 },
+        averageAge: { $avg: "$dob.age" },
+      },
+    },
+  },
+]);
