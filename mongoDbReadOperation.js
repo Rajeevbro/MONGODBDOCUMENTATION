@@ -5,6 +5,7 @@ db.boxofficeData.find({ "meta.rating": { $gt: 9.2 } }).count();
 db.movies.find({ summary: { $regex: /Armstrong/ } });
 
 //complex And in mongodb which find meeting all the criteria
+// SOme more example
 
 db.movies
   .find({
