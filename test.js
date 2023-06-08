@@ -2,3 +2,5 @@
 // May be not
 
 // This text to be changed from git
+
+// Some changes meade during comment fixing
